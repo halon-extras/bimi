@@ -1,6 +1,6 @@
-## bimi
+## Brand Indicators for Message Identification
 
-BIMI usage
+Usage
 
 ```
 import { bimi } from "bimi/bimi.hsl";
