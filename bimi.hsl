@@ -1,0 +1,69 @@
+import { organizationalDomain } from "dmarc/dmarc.hsl";
+
+function bimi($mail, $dmarc)
+{
+	$mail->delHeader("BIMI-Location");
+	$mail->delHeader("BIMI-Indicator");
+
+	if ($dmarc["result"] != "pass")
+		return none;
+	
+	$dmarc["policy"] = "quarantine";
+	if ($dmarc["policy"] == "none")
+		return none;
+
+	if ($dmarc["policy"] == "quarantine" and $dmarc["dmarc"]["pct"] ? number($dmarc["dmarc"]["pct"]) : 100 != 100)
+		return none;
+	
+	$domain = $dmarc["from"];
+	$odomain = $dmarc["from"] != $dmarc["pdomain"] ? $dmarc["pdomain"] : organizationalDomain($dmarc["from"]) ?: $dmarc["from"];
+
+  $selector = "default";
+  $selectors = $mail->getHeaders("BIMI-Selector", ["field" => true]);
+  if (length($selectors) == 1)
+  {   
+    $headers = array_map(str_strip, str_split(str_lower($dmarc["dkim"][0]["tags"]["h"]), ":"));
+    if (array_includes("bimi-selector", $headers))
+      $selector = get_bimi_selector(str_split($selectors[0], ":", 2)) ?: $selector;
+  }
+
+	$x = get_bimi_record($selector, $domain);
+	if (!$x or length($x) == 0)
+		$x = get_bimi_record("default", $odomain);
+	if (!$x or length($x) != 1)
+		return none;
+
+	if (!isset($x[0]["l"]) or (str_lower($x[0]["l"][0:8]) != "https://" and $x[0]["l"] != ""))
+		return none;
+
+	if (isset($x[0]["a"]) and (str_lower($x[0]["a"][0:8]) != "https://" and $x[0]["a"] != ""))
+		return none;
+
+	return $x[0];
+}
+
+function get_bimi_selector($header)
+{
+    $x = header_dkim_decode($header);
+    if (!isset($x["v"]) or $x["v"] != "BIMI1")
+        return none;
+    if (!isset($x["s"]) or $x["s"] == "")
+        return none;
+    return $x["s"];
+}
+
+function get_bimi_record($selector, $domain)
+{
+    $result = dns_query("$selector._bimi.$domain", ["type" => "txt"]);
+    if (!isset($result["result"]))
+        return none;
+    $r = [];
+    foreach ($result["result"] as $txt)
+    {
+		$x = header_dkim_decode($txt);
+		if (!isset($x["v"]) or $x["v"] != "BIMI1")
+            continue;
+		$r[] = $x;
+    }
+    return $r;
+}
