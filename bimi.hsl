@@ -18,14 +18,14 @@ function bimi($mail, $dmarc)
 	$domain = $dmarc["from"];
 	$odomain = $dmarc["from"] != $dmarc["pdomain"] ? $dmarc["pdomain"] : organizationalDomain($dmarc["from"]) ?: $dmarc["from"];
 
-  $selector = "default";
-  $selectors = $mail->getHeaders("BIMI-Selector", ["field" => true]);
-  if (length($selectors) == 1)
-  {   
-    $headers = array_map(str_strip, str_split(str_lower($dmarc["dkim"][0]["tags"]["h"]), ":"));
-    if (array_includes("bimi-selector", $headers))
-      $selector = get_bimi_selector(str_split($selectors[0], ":", 2)) ?: $selector;
-  }
+	$selector = "default";
+	$selectors = $mail->getHeaders("BIMI-Selector", ["field" => true]);
+	if (length($selectors) == 1)
+	{   
+		$headers = array_map(str_strip, str_split(str_lower($dmarc["dkim"][0]["tags"]["h"]), ":"));
+		if (array_includes("bimi-selector", $headers))
+			$selector = get_bimi_selector(str_split($selectors[0], ":", 2)) ?: $selector;
+	}
 
 	$x = get_bimi_record($selector, $domain);
 	if (!$x or length($x) == 0)
@@ -44,26 +44,26 @@ function bimi($mail, $dmarc)
 
 function get_bimi_selector($header)
 {
-    $x = header_dkim_decode($header);
-    if (!isset($x["v"]) or $x["v"] != "BIMI1")
-        return none;
-    if (!isset($x["s"]) or $x["s"] == "")
-        return none;
-    return $x["s"];
+	$x = header_dkim_decode($header);
+	if (!isset($x["v"]) or $x["v"] != "BIMI1")
+		return none;
+	if (!isset($x["s"]) or $x["s"] == "")
+		return none;
+	return $x["s"];
 }
 
 function get_bimi_record($selector, $domain)
 {
-    $result = dns_query("$selector._bimi.$domain", ["type" => "txt"]);
-    if (!isset($result["result"]))
-        return none;
-    $r = [];
-    foreach ($result["result"] as $txt)
-    {
+	$result = dns_query("$selector._bimi.$domain", ["type" => "txt"]);
+	if (!isset($result["result"]))
+		return none;
+	$r = [];
+	foreach ($result["result"] as $txt)
+	{
 		$x = header_dkim_decode($txt);
 		if (!isset($x["v"]) or $x["v"] != "BIMI1")
-            continue;
+			continue;
 		$r[] = $x;
-    }
-    return $r;
+	}
+	return $r;
 }
