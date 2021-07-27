@@ -6,40 +6,39 @@ function bimi($mail, $dmarc)
 	$mail->delHeader("BIMI-Indicator");
 
 	if ($dmarc["result"] != "pass")
-		return none;
-	
-	$dmarc["policy"] = "quarantine";
+		return ["error" => "DMARC failed: ".$dmarc["result"], "class" => "dmarc"];
+
 	if ($dmarc["policy"] == "none")
-		return none;
+		return ["error" => "DMARC policy: none", "class" => "dmarc"];
 
 	if ($dmarc["policy"] == "quarantine" and $dmarc["dmarc"]["pct"] ? number($dmarc["dmarc"]["pct"]) : 100 != 100)
-		return none;
-	
+		return ["error" => "DMARC policy: quarantine", "class" => "dmarc"];
+
 	$domain = $dmarc["from"];
 	$odomain = $dmarc["from"] != $dmarc["pdomain"] ? $dmarc["pdomain"] : organizationalDomain($dmarc["from"]) ?: $dmarc["from"];
 
 	$selector = "default";
 	$selectors = $mail->getHeaders("BIMI-Selector", ["field" => true]);
 	if (length($selectors) == 1)
-	{   
+	{
 		$headers = array_map(str_strip, str_split(str_lower($dmarc["dkim"][0]["tags"]["h"]), ":"));
 		if (array_includes("bimi-selector", $headers))
 			$selector = get_bimi_selector(str_split($selectors[0], ":", 2)) ?: $selector;
 	}
 
-	$x = get_bimi_record($selector, $domain);
+	$x = get_bimi_record($bimiselector = $selector, $bimidomain = $domain);
 	if (!$x or length($x) == 0)
-		$x = get_bimi_record("default", $odomain);
+		$x = get_bimi_record($bimiselector = "default", $bimidomain = $odomain);
 	if (!$x or length($x) != 1)
-		return none;
+		return ["error" => "No valid BIMI record", "class" => "dns"];
 
 	if (!isset($x[0]["l"]) or (str_lower($x[0]["l"][0:8]) != "https://" and $x[0]["l"] != ""))
-		return none;
+		return ["error" => "Invalid BIMI record (l tag)", "class" => "bimi"];
 
 	if (isset($x[0]["a"]) and (str_lower($x[0]["a"][0:8]) != "https://" and $x[0]["a"] != ""))
-		return none;
+		return ["error" => "Invalid BIMI record (a tag)", "class" => "bimi"];
 
-	return $x[0];
+	return ["record" => $x[0], "domain" => $bimidomain, "selector" => $bimiselector];
 }
 
 function get_bimi_selector($header)
@@ -66,4 +65,118 @@ function get_bimi_record($selector, $domain)
 		$r[] = $x;
 	}
 	return $r;
+}
+
+function bimi_vmc($bimi, $ca)
+{
+	$certificate = http($bimi["record"]["a"], ["timeout" => 5, "max_file_size" => 512000, "tls_default_ca" => true]);
+	if (!$certificate)
+		return ["error" => "Could not fetch ".$bimi["record"]["a"]];
+
+	$pems = X509::String($certificate, ["pem" => true, "multiple" => true]);
+	if (!$pems)
+		return ["error" => "Bad certificate chain"];
+
+	$selector = $bimi["selector"];
+	$domain = $bimi["domain"];
+	$altnames = $pems[0]->subject_alt_name()["DNS"];
+	if (!array_includes($selector."_bimi.".$domain, $altnames) and
+			!array_includes($domain, $altnames))
+		return ["error" => "Domain ".$selector."._bimi.".$domain." not in certificate ".array_join($altnames, ", ")];
+
+	$result = $pems[0]->verify($ca, $pems[1:]);
+	if (!$result["result"])
+		return ["error" => $result["error"]];
+
+	$extensions = $pems[0]->extensions();
+	if (!array_find(function ($v) {
+				return $v["name"] == "extendedKeyUsage" and unpack("H*", $v["value"])[0] == "300a06082b0601050507031f"; // SEQUENCE + OBJECT ID 1.3.6.1.5.5.7.3.31
+				}, $extensions))
+	return ["error" => "No valid extendedKeyUsage (1.3.6.1.5.5.7.3.31)"];
+
+	$logo = array_find(function ($v) {
+			return $v["oid"] == "1.3.6.1.5.5.7.1.12";
+			}, $extensions);
+	if (!$logo)
+		return ["error" => "No logo extension (1.3.6.1.5.5.7.1.12)"];
+
+	/* Parse ASN.1 */
+	$tokens = [];
+	$x = [ASN1($logo["value"])];
+	while (count($x))
+	{
+		$c = $x[-1:][0];
+		while (true)
+		{
+			$v = $c->next();
+			if (!$v)
+			{
+				$x = $x[:-1];
+				break;
+			}
+			$tokens[] = $v;
+			if ($v["form"] == "constructed")
+			{
+				$x[] = ASN1($v["value"]);
+				break;
+			}
+		}
+	}
+
+	if (count($tokens) != 15 or
+			$tokens[0]["class"] != "universal" or $tokens[0]["form"] != "constructed" or $tokens[0]["type"] != 16 or
+			$tokens[1]["class"] != "context" or $tokens[1]["form"] != "constructed" or $tokens[1]["type"] != 2 or
+			$tokens[2]["class"] != "context" or $tokens[2]["form"] != "constructed" or $tokens[2]["type"] != 0 or
+			$tokens[6]["class"] != "universal" or $tokens[6]["form"] != "primitive" or $tokens[6]["type"] != 22 or $tokens[6]["value"] != "image/svg+xml" or
+			$tokens[14]["class"] != "universal" or $tokens[14]["form"] != "primitive" or $tokens[14]["type"] != 22)
+		return ["error" => "Bad ASN.1 LogoType"];
+
+	$imageData = pcre_match(#/^data:image\/svg\+xml;base64,(.+)/, $tokens[14]["value"]);
+	if (!$imageData)
+		return ["error" => "Bad ASN.1 ImageData"];
+
+	return ["indicator" => $imageData[1]];
+}
+
+/* Basic ASN1 parser */
+class ASN1
+{
+	private $value = "";
+	private $offset = 0;
+	constructor($value)
+	{
+		$this->value = $value;
+	}
+	function next()
+	{
+		if ($this->offset == strlen($this->value))
+			return none;
+
+		$t = unpack("CC", $this->value, $this->offset);
+		$type = $t[0];
+		$len = $t[1];
+		$this->offset += 2;
+
+		if ($len > 127)
+		{
+			$ll = $len - 128;
+			$u = unpack("C" * $ll, $this->value, $this->offset);
+			$this->offset += $ll;
+
+			$m = $ll;
+			$len = array_reduce(function($c, $v) closure ($m) {return $c + ($v * (256 ** --$m)); }, $u, 0);
+		}
+
+		$this->offset += $len;
+		if ($this->offset > length($this->value))
+			return none;
+
+		return [
+			"class" => ["universal", "application", "context", "private"][($type >> 6) & 0b11],
+			"form" => $type & 0b0010_0000 ? "constructed" : "primitive",
+			"type" => $type & 0b0001_1111,
+			"length" => $len,
+			"value" => $this->value[$this->offset - $len:$this->offset]
+		];
+	}
 }
