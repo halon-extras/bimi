@@ -10,7 +10,7 @@ import { dmarc } from "dmarc/dmarc.hsl";
 $dmarc = dmarc($mail, $senderip, $senderhelo, $senderdomain);
 $bimi = bimi($mail, $dmarc);
 
-// Verified
+// Verified Mark Certificate (VMC)
 if ($bimi["record"]["a"])
 {
 	$bimi_vmc = bimi_vmc($bimi, $calist);
