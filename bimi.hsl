@@ -135,7 +135,14 @@ function bimi_vmc($bimi, $ca)
 	if (!$imageData)
 		return ["error" => "Bad ASN.1 ImageData"];
 
-	return ["indicator" => $imageData[1]];
+	// decompress .gz
+	$logoData = zlib_uncompress(base64_decode($imageData[1]), 15 | 16);
+
+	// sha1 Checksum
+	if ($tokens[12]["class"] != "universal" or $tokens[12]["form"] != "primitive" or $tokens[12]["type"] != 4 or $tokens[12]["value"] != sha1($logoData, ["binary" => true]))
+		return ["error" => "Bad ASN.1 ImageData checksum"];
+
+	return ["indicator" => $logoData];
 }
 
 /* Basic ASN1 parser */
