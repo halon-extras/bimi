@@ -5,8 +5,8 @@
 #include <string>
 #include <vector>
 
-xmlRelaxNGParserCtxtPtr RNGparser;
-xmlRelaxNGPtr RNGschema;
+xmlRelaxNGParserCtxtPtr RNGparser = nullptr;
+xmlRelaxNGPtr RNGschema = nullptr;
 
 HALON_EXPORT
 int Halon_version()

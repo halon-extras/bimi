@@ -10,5 +10,5 @@ plugins:
   - id: bimi
     path: /opt/halon/plugins/bimi.so
     config:
-      schema: /path/to/SVG_1.2_PS.rng
+      schema: /path/to/SVG_PS-latest.rng
 ```
