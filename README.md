@@ -16,9 +16,17 @@ if ($bimi["record"]["a"])
 	$bimi_vmc = bimi_vmc($bimi, $calist);
 	if ($bimi_vmc["indicator"])
 	{
-		$mail->addHeader("BIMI-Indicator",
-			str_strip(array_join(pcre_match_all(#/(^(.{0,49})|(.{0,64}))/, $bimi_vmc["indicator"])[1], "\r\n ")),
-			["encode" => false]);
+		$bimi_svg = bimi_svg_check($bimi_vmc["indicator"]); // see plugin
+		if ($bimi_svg["valid"])
+		{
+			$mail->addHeader("BIMI-Indicator",
+				str_strip(array_join(pcre_match_all(#/(^(.{0,49})|(.{0,64}))/, $bimi_vmc["indicator"])[1], "\r\n ")),
+				["encode" => false]);
+		}
+		else
+		{
+			echo "BIMI SVG error: $bimi_vmc; $bimi; $bimi_svg";
+		}
 	}
 	else
 		echo "BIMI VMC error: $bimi_vmc; $bimi";
@@ -36,9 +44,13 @@ if ($bimi["record"]["l"])
 	$svg = http($bimi["record"]["l"], ["timeout" => 5, "max_file_size" => 512000, "tls_default_ca" => true]);
 	if ($svg)
 	{
-		$mail->addHeader("BIMI-Indicator",
-			str_strip(array_join(pcre_match_all(#/(^(.{0,49})|(.{0,64}))/, base64_encode($svg))[1], "\r\n ")),
-			["encode" => false]);
+		$bimi_svg = bimi_svg_check($svg); // see plugin
+		if ($bimi_svg["valid"])
+		{
+			$mail->addHeader("BIMI-Indicator",
+				str_strip(array_join(pcre_match_all(#/(^(.{0,49})|(.{0,64}))/, base64_encode($svg))[1], "\r\n ")),
+				["encode" => false]);
+		}
 	}
 }
 */
