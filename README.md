@@ -20,7 +20,7 @@ if ($bimi["record"]["a"])
 		if ($bimi_svg["valid"])
 		{
 			$mail->addHeader("BIMI-Indicator",
-				str_strip(array_join(pcre_match_all(#/(^(.{0,49})|(.{0,64}))/, $bimi_vmc["indicator"])[1], "\r\n ")),
+				str_strip(array_join(pcre_match_all(#/(^(.{0,49})|(.{0,64}))/, base64_encode($bimi_vmc["indicator"]))[1], "\r\n ")),
 				["encode" => false]);
 		}
 		else
