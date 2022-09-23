@@ -16,7 +16,7 @@ if ($bimi["record"]["a"])
 	$bimi_vmc = bimi_vmc($bimi, $calist);
 	if ($bimi_vmc["indicator"])
 	{
-		$bimi_svg = bimi_svg_check($bimi_vmc["indicator"]); // see plugin
+		$bimi_svg = bimi_svg_check($bimi_vmc["indicator"]);
 		if ($bimi_svg["valid"])
 		{
 			$mail->addHeader("BIMI-Indicator",
