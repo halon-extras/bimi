@@ -22,6 +22,16 @@ if ($bimi["record"]["a"])
 			$mail->addHeader("BIMI-Indicator",
 				str_strip(array_join(pcre_match_all(#/(^(.{0,49})|(.{0,64}))/, base64_encode($bimi_vmc["indicator"]))[1], "\r\n ")),
 				["encode" => false]);
+			$mail->addHeader("BIMI-Location",
+				"v=BIMI1; l=".$bimi["record"]["l"]." a=".$bimi["record"]["a"]);
+			$mail->addHeader("Authentication-Results",
+				gethostname()."; bimi=pass header.d=".$bimi["domain"]." header.selector=".$bimi["selector"].
+				" policy.authority=pass policy.authority-uri=".$bimi["record"]["a"]);
+			/*
+			// required by some email clients
+			$mail->signDKIM(...selector, ...domain, ...key,
+				["additional_headers" => ["Authentication-Results"], "body_length" => 0]);
+			*/
 		}
 		else
 		{
