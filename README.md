@@ -29,7 +29,7 @@ if ($bimi["record"]["a"])
 				" policy.authority=pass policy.authority-uri=".$bimi["record"]["a"]);
 			/*
 			// required by some email clients
-			$mail->signDKIM(...selector, ...domain, ...key,
+			$mail->signDKIM($selector, $domain, $key,
 				["additional_headers" => ["Authentication-Results"], "body_length" => 0]);
 			*/
 		}
