@@ -1,0 +1,18 @@
+[
+    {
+        "name": "bimi_svg_check",
+        "parameters": {
+            "required": [
+                {
+                    "name": "svg",
+                    "type": "string"
+                }
+            ]
+        },
+        "returnType": "array",
+        "detail": "bimi_svg_check(string $svg): array",
+        "value": "bimi_svg_check($0)",
+        "documentation": "Verify if an SVG image passes the profile of an BIMI compliant SVG image. Returns if `valid` (bool) and `error` (array) as an associative array.",
+        "link": "[Full documentation](https://github.com/halon-extras/bimi)"
+    }
+]

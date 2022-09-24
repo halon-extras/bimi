@@ -17,11 +17,11 @@ int Halon_version()
 HALON_EXPORT
 bool Halon_init(HalonInitContext* hic)
 {
-	HalonConfig *cfg, *app;
+	HalonConfig *cfg;
 	HalonMTA_init_getinfo(hic, HALONMTA_INIT_CONFIG, nullptr, 0, &cfg, nullptr);
 	const char* schema = HalonMTA_config_string_get(HalonMTA_config_object_get(cfg, "schema"), nullptr);
 	if (!schema)
-		return false;
+		schema = "/opt/halon/share/rng/plugins/bimi/SVG_PS-latest.rng";
 
 	RNGparser = xmlRelaxNGNewParserCtxt(schema);
 	if (!RNGparser)
@@ -99,7 +99,7 @@ void bimi_svg_check(HalonHSLContext* hhc, HalonHSLArguments* args, HalonHSLValue
 		buildResponse(ret, false, { "xmlNewParserCtxt failed" });
 		return;
 	}
-	xmlDocPtr SVGdoc = xmlCtxtReadMemory(SVGctx, svg, svglen, nullptr, nullptr, XML_PARSE_NOERROR | XML_PARSE_NOWARNING);
+	xmlDocPtr SVGdoc = xmlCtxtReadMemory(SVGctx, svg, (int)svglen, nullptr, nullptr, XML_PARSE_NOERROR | XML_PARSE_NOWARNING);
 	if (!SVGdoc)
 	{
 		xmlErrorPtr SVGErr = xmlCtxtGetLastError(SVGctx);

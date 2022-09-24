@@ -1,0 +1,3 @@
+*.so
+/build/dist
+/build/vscode

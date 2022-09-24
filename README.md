@@ -1,9 +1,27 @@
 ## Brand Indicators for Message Identification
 
-Usage
+This plugin requires both HSL code and a plugin. The plugin validates SVG images as required by the BIMI specification. It depends on libxml2 and is based on RelaxNG. It add the ``bimi_svg_check`` function to HSL.
+
+## Installation
+
+Follow the [instructions](https://docs.halon.io/manual/comp_install.html#installation) in our manual to add our package repository and then run the below command.
+
+### Ubuntu
 
 ```
-import $calist from "bimi/ca.crt";
+apt-get install halon-extras-bimi
+```
+
+### RHEL
+
+```
+yum install halon-extras-bimi
+```
+
+## Usage
+
+```
+import $bimi_calist from "bimi/ca.crt";
 import { bimi, bimi_vmc } from "bimi/bimi.hsl";
 import { dmarc } from "dmarc/dmarc.hsl";
 
@@ -13,7 +31,7 @@ $bimi = bimi($mail, $dmarc);
 // Verified Mark Certificate (VMC)
 if ($bimi["record"]["a"])
 {
-	$bimi_vmc = bimi_vmc($bimi, $calist);
+	$bimi_vmc = bimi_vmc($bimi, $bimi_calist);
 	if ($bimi_vmc["indicator"])
 	{
 		$bimi_svg = bimi_svg_check($bimi_vmc["indicator"]);

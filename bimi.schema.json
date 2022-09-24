@@ -9,6 +9,7 @@
   "properties": {
     "schema": {
       "type": "string",
+      "default": "/opt/halon/share/rng/plugins/bimi/SVG_PS-latest.rng",
       "description": "RelaxNG schema path (.rng)"
     }
   }

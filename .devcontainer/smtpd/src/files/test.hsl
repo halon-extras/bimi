@@ -1,0 +1,1 @@
+echo bimi_svg_check(http("https://instagram.com/images/bimi/ig-logo.svg"));

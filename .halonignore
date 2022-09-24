@@ -1,3 +1,10 @@
+build
+bimi.cpp
+bimi.functions.json
+bimi.schema.json
+CMakeLists.txt
 LICENSE
+postinst
+postrm
 README.md
-plugin
+SVG_PS-latest.rng
