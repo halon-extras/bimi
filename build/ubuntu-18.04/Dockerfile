@@ -1,4 +1,4 @@
-FROM ubuntu:18.04
+FROM --platform=linux/amd64 ubuntu:18.04
 LABEL org.opencontainers.image.authors="support@halon.io"
 
 ARG HALON_REPO_USER
