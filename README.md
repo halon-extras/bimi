@@ -1,6 +1,6 @@
 ## Brand Indicators for Message Identification
 
-This plugin requires both HSL code and a plugin. The plugin validates SVG images as required by the BIMI specification. It depends on libxml2 and is based on RelaxNG. It add the ``bimi_svg_check`` function to HSL.
+This plugin adds BIMI validation. It supports both VMC (see current ca.cert) and "externally verified" certificates/domains. It can also validates SVG image profiles as required by the BIMI specification. This plugin depends on libxml2 and its validation is based on a RelaxNG scheme.
 
 ## Installation
 
