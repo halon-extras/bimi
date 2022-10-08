@@ -54,6 +54,7 @@ ENDIF()
 
 INSTALL(FILES "bimi.hsl" DESTINATION "plugins/hsl/${PROJECT_NAME}")
 INSTALL(FILES "main.hsl" DESTINATION "plugins/hsl/${PROJECT_NAME}")
+INSTALL(FILES "ca.crt" DESTINATION "plugins/hsl/${PROJECT_NAME}")
 INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/bimi.so DESTINATION plugins RENAME bimi-helper.so)
 INSTALL(FILES bimi.schema.json DESTINATION share/plugins)
 INSTALL(FILES bimi.functions.json DESTINATION share/plugins)
