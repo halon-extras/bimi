@@ -1,4 +1,3 @@
-import { organizationalDomain } from "extras://dmarc";
 import $bimi_calist from "./ca.crt";
 
 function bimi($mail, $dmarc)
@@ -189,4 +188,22 @@ class ASN1
 			"value" => $this->value[$this->offset - $len:$this->offset]
 		];
 	}
+}
+
+function organizationalDomain($domain)
+{
+	$publicSuffix = domain_publicsuffix($domain);
+	if ($publicSuffix == none)
+		return none;
+
+	$domainParts = str_split($domain, ".");
+	$domainTLD = str_split($publicSuffix, ".");
+	if (length($domainTLD) == length($domainParts))
+		return none;
+
+	$domainOrg = array_join($domainParts[-length($domainTLD) - 1:], ".");
+	if ($domainOrg == $domain)
+		return none;
+
+	return $domainOrg;
 }
