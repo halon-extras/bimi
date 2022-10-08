@@ -21,9 +21,8 @@ yum install halon-extras-bimi
 ## Usage
 
 ```
-import $bimi_calist from "bimi/ca.crt";
-import { bimi, bimi_vmc } from "bimi/bimi.hsl";
-import { dmarc } from "dmarc/dmarc.hsl";
+import { dmarc } from "extras://dmarc";
+import { bimi, bimi_vmc, bimi_svg_check } from "extras://bimi";
 
 $dmarc = dmarc($mail, $senderip, $senderhelo, $senderdomain);
 $bimi = bimi($mail, $dmarc);
@@ -31,7 +30,7 @@ $bimi = bimi($mail, $dmarc);
 // Verified Mark Certificate (VMC)
 if ($bimi["record"]["a"])
 {
-	$bimi_vmc = bimi_vmc($bimi, $bimi_calist);
+	$bimi_vmc = bimi_vmc($bimi);
 	if ($bimi_vmc["indicator"])
 	{
 		$bimi_svg = bimi_svg_check($bimi_vmc["indicator"]);

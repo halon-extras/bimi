@@ -123,6 +123,6 @@ void bimi_svg_check(HalonHSLContext* hhc, HalonHSLArguments* args, HalonHSLValue
 HALON_EXPORT
 bool Halon_hsl_register(HalonHSLRegisterContext* ptr)
 {
-	HalonMTA_hsl_register_function(ptr, "bimi_svg_check", &bimi_svg_check);
+	HalonMTA_hsl_module_register_function(ptr, "bimi_svg_check", &bimi_svg_check);
 	return true;
 }
