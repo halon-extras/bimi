@@ -21,7 +21,7 @@ bool Halon_init(HalonInitContext* hic)
 	HalonMTA_init_getinfo(hic, HALONMTA_INIT_CONFIG, nullptr, 0, &cfg, nullptr);
 	const char* schema = HalonMTA_config_string_get(HalonMTA_config_object_get(cfg, "schema"), nullptr);
 	if (!schema)
-		schema = "/opt/halon/share/rng/plugins/bimi/SVG_PS-latest.rng";
+		schema = "/storage/SVG_PS-latest.rng";
 
 	RNGparser = xmlRelaxNGNewParserCtxt(schema);
 	if (!RNGparser)

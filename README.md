@@ -4,25 +4,27 @@ This plugin adds BIMI validation. It supports both VMC (see current ca.cert) and
 
 ## Installation
 
-Follow the [instructions](https://docs.halon.io/manual/comp_install.html#installation) in our manual to add our package repository and then run the below command.
-
-### Ubuntu
-
-```
-apt-get install halon-extras-bimi
-```
-
-### RHEL
-
-```
-yum install halon-extras-bimi
-```
+1. [Enable root login](https://support.halon.io/hc/en-us/articles/360000333929-Enable-root-login)
+2. Download the `halon-extras-bimi-1.0.0-freebsd-12.3-x86_64.zip` file from [here](https://github.com/halon-extras/bimi/releases/tag/1.0.0) and extract it
+2. Use SCP to upload the plugin to each Halon MTA node
+	* Place the `SVG_PS-latest.rng` file at `/storage/SVG_PS-latest.rng`
+	* Place the `bimi.so` file at `/storage/plugins/bimi.so`
+	* Place the `lib/libxml2.so` file at `/storage/plugins/lib/libxml2.so`
+3. Go in under "Hosts -> Services -> SMTP server" in the web administration and add the plugin on each MTA node with the ID `bimi`
+	* Also enable the "HSL plugin" checkbox
+4. Add the HSL module to the configuration
+	* Add the `main.hsl` file with the ID `bimi/main.hsl`
+	* Add the `bimi.hsl` file with the ID `bimi/bimi.hsl`
+	* Add the `ca.crt` file with the ID `bimi/ca.crt`
+5. Add the [DMARC HSL module](https://github.com/halon-extras/dmarc) to the configuration
+	* Add the `main.hsl` file with the ID `dmarc/main.hsl`
+	* Add the `dmarc.hsl` file with the ID `dmarc/dmarc.hsl`
 
 ## Usage
 
 ```
-import { dmarc } from "extras://dmarc";
-import { bimi, bimi_vmc, bimi_svg_check } from "extras://bimi";
+import { dmarc } from "dmarc";
+import { bimi, bimi_vmc, bimi_svg_check } from "bimi";
 
 $dmarc = dmarc($mail, $senderip, $senderhelo, $senderdomain);
 $bimi = bimi($mail, $dmarc);

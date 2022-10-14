@@ -1,3 +1,0 @@
-#!/bin/sh
-
-echo "dont forget to disable plugin and restart smtpd"
