@@ -27,8 +27,8 @@ import { dmarc } from "dmarc";
 import { bimi, bimi_vmc, bimi_svg_check } from "bimi";
 
 $mail = $arguments["mail"];
-$dmarc = dmarc($arguments["mail"], $connection["remoteip"], $connection["helo"], $transaction["senderaddress"]["domain"]);
-$bimi = bimi($arguments["mail"], $dmarc);
+$dmarc = dmarc($mail, $connection["remoteip"], $connection["helo"], $transaction["senderaddress"]["domain"]);
+$bimi = bimi($mail, $dmarc);
 
 // Verified Mark Certificate (VMC)
 if ($bimi["record"]["a"])
