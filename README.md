@@ -26,8 +26,9 @@ This plugin adds BIMI validation. It supports both VMC (see current ca.cert) and
 import { dmarc } from "dmarc";
 import { bimi, bimi_vmc, bimi_svg_check } from "bimi";
 
-$dmarc = dmarc($mail, $senderip, $senderhelo, $senderdomain);
-$bimi = bimi($mail, $dmarc);
+$mail = $arguments["mail"];
+$dmarc = dmarc($arguments["mail"], $connection["remoteip"], $connection["helo"], $transaction["senderaddress"]["domain"]);
+$bimi = bimi($arguments["mail"], $dmarc);
 
 // Verified Mark Certificate (VMC)
 if ($bimi["record"]["a"])
