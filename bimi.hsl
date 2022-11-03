@@ -1,7 +1,9 @@
 import $bimi_calist from "./ca.crt";
 
-function bimi($mail, $dmarc)
+function bimi($mail, $dmarc, $options = [])
 {
+	$allowUnsignedSelector = $options["allow_unsigned_selector"] ?? false;
+
 	$mail->delHeader("BIMI-Location");
 	$mail->delHeader("BIMI-Indicator");
 
@@ -22,7 +24,7 @@ function bimi($mail, $dmarc)
 	if (length($selectors) == 1)
 	{
 		$headers = array_map(str_strip, str_split(str_lower($dmarc["dkim"][0]["tags"]["h"]), ":"));
-		if (array_includes("bimi-selector", $headers))
+		if ($allowUnsignedSelector or array_includes("bimi-selector", $headers))
 			$selector = get_bimi_selector(str_split($selectors[0], ":", 2)[1]) ?: $selector;
 	}
 
