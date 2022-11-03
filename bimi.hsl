@@ -23,7 +23,7 @@ function bimi($mail, $dmarc)
 	{
 		$headers = array_map(str_strip, str_split(str_lower($dmarc["dkim"][0]["tags"]["h"]), ":"));
 		if (array_includes("bimi-selector", $headers))
-			$selector = get_bimi_selector(str_split($selectors[0], ":", 2)) ?: $selector;
+			$selector = get_bimi_selector(str_split($selectors[0], ":", 2)[1]) ?: $selector;
 	}
 
 	$x = get_bimi_record($bimiselector = $selector, $bimidomain = $domain);
@@ -71,7 +71,7 @@ function bimi_vmc($bimi, $ca = none)
 {
 	global $bimi_calist;
 	$ca = $ca ?? $bimi_calist;
-	$certificate = http($bimi["record"]["a"], ["timeout" => 5, "max_file_size" => 512000, "tls_default_ca" => true]);
+	$certificate = http($bimi["record"]["a"], ["timeout" => 5, "max_file_size" => 512000, "tls_default_ca" => true, "redirects" => 1]);
 	if (!$certificate)
 		return ["error" => "Could not fetch ".$bimi["record"]["a"]];
 
