@@ -142,9 +142,28 @@ function bimi_vmc($bimi, $ca = none)
 	// decompress .gz
 	$logoData = zlib_uncompress(base64_decode($imageData[1]), 15 | 16);
 
-	// sha1 Checksum
-	if ($tokens[12]["class"] != "universal" or $tokens[12]["form"] != "primitive" or $tokens[12]["type"] != 4 or $tokens[12]["value"] != sha1($logoData, ["binary" => true]))
-		return ["error" => "Bad ASN.1 ImageData checksum"];
+	// has checksum
+	if ($tokens[12]["class"] != "universal" or $tokens[12]["form"] != "primitive" or $tokens[12]["type"] != 4)
+		return ["error" => "Missing ASN.1 ImageData checksum"];
+
+	// verify hashes
+	switch ($tokens[12]["length"])
+	{
+		case 20:
+			if ($tokens[12]["value"] != sha1($logoData, ["binary" => true]))
+				return ["error" => "Bad ASN.1 ImageData checksum (sha1)"];
+		break;
+		case 32:
+			if ($tokens[12]["value"] != sha2($logoData, 256, ["binary" => true]))
+				return ["error" => "Bad ASN.1 ImageData checksum (sha256)"];
+		break;
+		case 64:
+			if ($tokens[12]["value"] != sha2($logoData, 512, ["binary" => true]))
+				return ["error" => "Bad ASN.1 ImageData checksum (sha512)"];
+		break;
+		default:
+			return ["error" => "Bad ASN.1 ImageData checksum type"];
+	}
 
 	return ["indicator" => $logoData];
 }
