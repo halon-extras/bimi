@@ -165,7 +165,7 @@ function bimi_vmc($bimi, $ca = none)
 			return ["error" => "Bad ASN.1 ImageData checksum type"];
 	}
 
-	return ["indicator" => $logoData];
+	return ["indicator" => $logoData, "subject" => $pems[0]->subject()];
 }
 
 /* Basic ASN1 parser */
