@@ -81,16 +81,16 @@ function bimi_vmc($bimi, $ca = none)
 	if (!$pems)
 		return ["error" => "Bad certificate chain"];
 
+	$result = $pems[0]->verify($ca, $pems[1:]);
+	if (!$result["result"])
+		return ["error" => $result["error"]];
+
 	$selector = $bimi["selector"];
 	$domain = $bimi["domain"];
 	$altnames = $pems[0]->subject_alt_name()["DNS"];
 	if (!array_includes($selector."_bimi.".$domain, $altnames) and
 			!array_includes($domain, $altnames))
 		return ["error" => "Domain ".$selector."._bimi.".$domain." not in certificate ".array_join($altnames, ", ")];
-
-	$result = $pems[0]->verify($ca, $pems[1:]);
-	if (!$result["result"])
-		return ["error" => $result["error"]];
 
 	$extensions = $pems[0]->extensions();
 	if (!array_find(function ($v) {
