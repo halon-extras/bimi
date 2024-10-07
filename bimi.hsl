@@ -10,14 +10,23 @@ function bimi($mail, $dmarc, $options = [])
 	if ($dmarc["result"] != "pass")
 		return ["error" => "DMARC failed: ".$dmarc["result"], "class" => "dmarc"];
 
-	if ($dmarc["policy"] == "none")
-		return ["error" => "DMARC policy: none", "class" => "dmarc"];
-
-	if ($dmarc["policy"] == "quarantine" and $dmarc["dmarc"]["pct"] ? number($dmarc["dmarc"]["pct"]) : 100 != 100)
-		return ["error" => "DMARC policy: quarantine", "class" => "dmarc"];
-
 	$domain = $dmarc["from"];
 	$odomain = $dmarc["from"] != $dmarc["pdomain"] ? $dmarc["pdomain"] : organizationalDomain($dmarc["from"]) ?: $dmarc["from"];
+
+	$result = check_dmarc_record($dmarc["dmarc"]);
+	if ($result["error"])
+		return $result;
+
+	// Enforce strict DMARC on organizational domain if different
+	if ($domain != $odomain)
+	{
+		$x = get_dmarc_record($odomain);
+		if (!$x or length($x) != 1)
+			return ["error" => "DMARC failed (organizational domain): No valid DMARC record", "class" => "dmarc"];
+		$result = check_dmarc_record($x[0]);
+		if ($result["error"])
+			return $result;
+	}
 
 	$selector = "default";
 	$selectors = $mail->getHeaders("BIMI-Selector", ["field" => true]);
@@ -67,6 +76,33 @@ function get_bimi_record($selector, $domain)
 		$r[] = $x;
 	}
 	return $r;
+}
+
+function get_dmarc_record($domain)
+{
+	$result = dns_query("_dmarc.$domain", ["type" => "txt"]);
+	if (!isset($result["result"]))
+		return none;
+	$r = [];
+	foreach ($result["result"] as $txt)
+	{
+		$x = header_dkim_decode($txt);
+		if (!isset($x["v"]) or $x["v"] != "DMARC1")
+			continue;
+		$r[] = $x;
+	}
+	return $r;
+}
+
+function check_dmarc_record($policy)
+{
+	if ($policy["p"] == "none")
+		return ["error" => "DMARC policy: p=none", "class" => "dmarc"];
+	if ($policy["sp"] == "none")
+		return ["error" => "DMARC policy: sp=none", "class" => "dmarc"];
+	if ($policy["p"] == "quarantine" and $policy["pct"] ? number($policy["pct"]) : 100 != 100)
+		return ["error" => "DMARC policy: p=quarantine and pct<100", "class" => "dmarc"];
+	return [];
 }
 
 function bimi_vmc($bimi, $ca = none)
