@@ -89,7 +89,8 @@ function bimi_vmc($bimi, $ca = none)
 	$domain = $bimi["domain"];
 	$altnames = $pems[0]->subject_alt_name()["DNS"];
 	if (!array_includes($selector."._bimi.".$domain, $altnames) and
-			!array_includes($domain, $altnames))
+			!array_includes($domain, $altnames) and
+			!array_includes(organizationalDomain($domain), $altnames))
 		return ["error" => "Domain ".$selector."._bimi.".$domain." not in certificate ".array_join($altnames, ", ")];
 
 	$extensions = $pems[0]->extensions();
