@@ -6,6 +6,7 @@ function bimi($mail, $dmarc, $options = [])
 
 	$mail->delHeader("BIMI-Location");
 	$mail->delHeader("BIMI-Indicator");
+	$mail->delHeader("BIMI-Logo-Preference");
 
 	if ($dmarc["result"] != "pass")
 		return ["error" => "DMARC failed: ".$dmarc["result"], "class" => "dmarc"];

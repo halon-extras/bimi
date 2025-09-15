@@ -42,6 +42,8 @@ if ($bimi["record"]["a"])
 				["encode" => false]);
 			$mail->addHeader("BIMI-Location",
 				"v=BIMI1; l=".$bimi["record"]["l"]." a=".$bimi["record"]["a"]);
+			$mail->addHeader("BIMI-Logo-Preference",
+				"avp=".($bimi["record"]["avp"] == "personal" ? "personal" : "brand"));
 			$mail->addHeader("Authentication-Results",
 				gethostname()."; bimi=pass header.d=".$bimi["domain"]." header.selector=".$bimi["selector"].
 				" policy.authority=pass policy.authority-uri=".$bimi["record"]["a"]);
