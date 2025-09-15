@@ -5,8 +5,8 @@
 #include <string>
 #include <vector>
 
-xmlRelaxNGParserCtxtPtr RNGparser = nullptr;
-xmlRelaxNGPtr RNGschema = nullptr;
+static xmlRelaxNGParserCtxtPtr RNGparser = nullptr;
+static xmlRelaxNGPtr RNGschema = nullptr;
 
 HALON_EXPORT
 int Halon_version()
@@ -41,7 +41,7 @@ void Halon_cleanup()
 	xmlRelaxNGFree(RNGschema);
 }
 
-void XMLerrors(void *ctx, const char *msg, ...)
+static void XMLerrors(void *ctx, const char *msg, ...)
 {
 	char str[1024];
 	va_list args;
@@ -51,7 +51,7 @@ void XMLerrors(void *ctx, const char *msg, ...)
 	((std::vector<std::string>*)ctx)->push_back(str);
 }
 
-void buildResponse(HalonHSLValue* ret, bool valid, const std::vector<std::string>& errors)
+static void buildResponse(HalonHSLValue* ret, bool valid, const std::vector<std::string>& errors)
 {
 	HalonMTA_hsl_value_set(ret, HALONMTA_HSL_TYPE_ARRAY, nullptr, 0);
 
