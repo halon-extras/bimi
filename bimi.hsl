@@ -9,7 +9,7 @@ function bimi($mail, $dmarc, $options = [])
 	$mail->delHeader("BIMI-Logo-Preference");
 
 	if ($dmarc["result"] != "pass")
-		return ["error" => "DMARC failed: ".$dmarc["result"], "class" => "dmarc"];
+		return ["error" => "DMARC failed: ".$dmarc["result"], "class" => "dmarc", "authentication-results" => "skipped"];
 
 	$domain = $dmarc["from"];
 	$odomain = $dmarc["from"] != $dmarc["pdomain"] ? $dmarc["pdomain"] : organizationalDomain($dmarc["from"]) ?: $dmarc["from"];
@@ -23,7 +23,7 @@ function bimi($mail, $dmarc, $options = [])
 	{
 		$x = get_dmarc_record($odomain);
 		if (!$x or length($x) != 1)
-			return ["error" => "DMARC failed (organizational domain): No valid DMARC record", "class" => "dmarc"];
+			return ["error" => "DMARC failed (organizational domain): No valid DMARC record", "class" => "dmarc", "authentication-results" => "skipped"];
 		$result = check_dmarc_record($x[0]);
 		if ($result["error"])
 			return $result;
@@ -42,15 +42,25 @@ function bimi($mail, $dmarc, $options = [])
 	if (!$x or length($x) == 0)
 		$x = get_bimi_record($bimiselector = "default", $bimidomain = $odomain);
 	if (!$x or length($x) != 1)
-		return ["error" => "No valid BIMI record", "class" => "dns"];
+	{
+		if (is_array($x))
+			return ["error" => "No valid BIMI record (in response)", "class" => "dns", "authentication-results" => "fail"];
+		if (is_boolean($x))
+			return ["error" => "No valid BIMI record", "class" => "dns", "authentication-results" => "none"];
+		/* catch all others error */
+		return ["error" => "No valid BIMI record", "class" => "dns", "authentication-results" => "tempfail"];
+	}
+
+	if ($x[0]["l"] == "" and $x[0]["a"] == "")
+		return ["error" => "Explicit refusal to participate in BIMI", "class" => "bimi", "authentication-results" => "declined"];
 
 	if (!isset($x[0]["l"]) or (str_lower($x[0]["l"][0:8]) != "https://" and $x[0]["l"] != ""))
-		return ["error" => "Invalid BIMI record (l tag)", "class" => "bimi"];
+		return ["error" => "Invalid BIMI record (l tag)", "class" => "bimi", "authentication-results" => "fail"];
 
 	if (isset($x[0]["a"]) and (str_lower($x[0]["a"][0:8]) != "https://" and $x[0]["a"] != ""))
-		return ["error" => "Invalid BIMI record (a tag)", "class" => "bimi"];
+		return ["error" => "Invalid BIMI record (a tag)", "class" => "bimi", "authentication-results" => "fail"];
 
-	return ["record" => $x[0], "domain" => $bimidomain, "selector" => $bimiselector];
+	return ["record" => $x[0], "domain" => $bimidomain, "selector" => $bimiselector, "authentication-results" => "pass"];
 }
 
 function get_bimi_selector($header)
@@ -66,8 +76,10 @@ function get_bimi_selector($header)
 function get_bimi_record($selector, $domain)
 {
 	$result = dns_query("$selector._bimi.$domain", ["type" => "txt"]);
+	if ($result["result"] == "NXDOMAIN" or (isset($result["result"]) and length($result["result"]) == 0))
+		return false;	/* no record */
 	if (!isset($result["result"]))
-		return none;
+		return none;	/* an error */
 	$r = [];
 	foreach ($result["result"] as $txt)
 	{
@@ -98,11 +110,11 @@ function get_dmarc_record($domain)
 function check_dmarc_record($policy)
 {
 	if ($policy["p"] == "none")
-		return ["error" => "DMARC policy: p=none", "class" => "dmarc"];
+		return ["error" => "DMARC policy: p=none", "class" => "dmarc", "authentication-results" => "skipped"];
 	if ($policy["sp"] == "none")
-		return ["error" => "DMARC policy: sp=none", "class" => "dmarc"];
+		return ["error" => "DMARC policy: sp=none", "class" => "dmarc", "authentication-results" => "skipped"];
 	if ($policy["p"] == "quarantine" and $policy["pct"] ? number($policy["pct"]) : 100 != 100)
-		return ["error" => "DMARC policy: p=quarantine and pct<100", "class" => "dmarc"];
+		return ["error" => "DMARC policy: p=quarantine and pct<100", "class" => "dmarc", "authentication-results" => "skipped"];
 	return [];
 }
 
@@ -112,15 +124,15 @@ function bimi_vmc($bimi, $ca = none)
 	$ca = $ca ?? $bimi_calist;
 	$certificate = http($bimi["record"]["a"], ["timeout" => 5, "max_file_size" => 512000, "tls_default_ca" => true, "redirects" => 1]);
 	if (!$certificate)
-		return ["error" => "Could not fetch ".$bimi["record"]["a"]];
+		return ["error" => "Could not fetch ".$bimi["record"]["a"], "authentication-results" => "fail"];
 
 	$pems = X509::String($certificate, ["pem" => true, "multiple" => true]);
 	if (!$pems)
-		return ["error" => "Bad certificate chain"];
+		return ["error" => "Bad certificate chain", "authentication-results" => "fail"];
 
 	$result = $pems[0]->verify($ca, $pems[1:]);
 	if (!$result["result"])
-		return ["error" => $result["error"]];
+		return ["error" => $result["error"], "authentication-results" => "fail"];
 
 	$selector = $bimi["selector"];
 	$domain = $bimi["domain"];
@@ -128,19 +140,19 @@ function bimi_vmc($bimi, $ca = none)
 	if (!array_includes($selector."._bimi.".$domain, $altnames) and
 			!array_includes($domain, $altnames) and
 			!array_includes(organizationalDomain($domain), $altnames))
-		return ["error" => "Domain ".$selector."._bimi.".$domain." not in certificate ".array_join($altnames, ", ")];
+		return ["error" => "Domain ".$selector."._bimi.".$domain." not in certificate ".array_join($altnames, ", "), "authentication-results" => "fail"];
 
 	$extensions = $pems[0]->extensions();
 	if (!array_find(function ($v) {
 				return $v["name"] == "extendedKeyUsage" and unpack("H*", $v["value"])[0] == "300a06082b0601050507031f"; // SEQUENCE + OBJECT ID 1.3.6.1.5.5.7.3.31
 				}, $extensions))
-	return ["error" => "No valid extendedKeyUsage (1.3.6.1.5.5.7.3.31)"];
+	return ["error" => "No valid extendedKeyUsage (1.3.6.1.5.5.7.3.31)", "authentication-results" => "fail"];
 
 	$logo = array_find(function ($v) {
 			return $v["oid"] == "1.3.6.1.5.5.7.1.12";
 			}, $extensions);
 	if (!$logo)
-		return ["error" => "No logo extension (1.3.6.1.5.5.7.1.12)"];
+		return ["error" => "No logo extension (1.3.6.1.5.5.7.1.12)", "authentication-results" => "fail"];
 
 	/* Parse ASN.1 */
 	$tokens = [];
@@ -171,39 +183,39 @@ function bimi_vmc($bimi, $ca = none)
 			$tokens[2]["class"] != "context" or $tokens[2]["form"] != "constructed" or $tokens[2]["type"] != 0 or
 			$tokens[6]["class"] != "universal" or $tokens[6]["form"] != "primitive" or $tokens[6]["type"] != 22 or $tokens[6]["value"] != "image/svg+xml" or
 			$tokens[14]["class"] != "universal" or $tokens[14]["form"] != "primitive" or $tokens[14]["type"] != 22)
-		return ["error" => "Bad ASN.1 LogoType"];
+		return ["error" => "Bad ASN.1 LogoType", "authentication-results" => "fail"];
 
 	$imageData = pcre_match(#/^data:image\/svg\+xml;base64,(.+)/, $tokens[14]["value"]);
 	if (!$imageData)
-		return ["error" => "Bad ASN.1 ImageData"];
+		return ["error" => "Bad ASN.1 ImageData", "authentication-results" => "fail"];
 
 	// decompress .gz
 	$logoData = zlib_uncompress(base64_decode($imageData[1]), 15 | 16);
 
 	// has checksum
 	if ($tokens[12]["class"] != "universal" or $tokens[12]["form"] != "primitive" or $tokens[12]["type"] != 4)
-		return ["error" => "Missing ASN.1 ImageData checksum"];
+		return ["error" => "Missing ASN.1 ImageData checksum", "authentication-results" => "fail"];
 
 	// verify hashes
 	switch ($tokens[12]["length"])
 	{
 		case 20:
 			if ($tokens[12]["value"] != sha1($logoData, ["binary" => true]))
-				return ["error" => "Bad ASN.1 ImageData checksum (sha1)"];
+				return ["error" => "Bad ASN.1 ImageData checksum (sha1)", "authentication-results" => "fail"];
 		break;
 		case 32:
 			if ($tokens[12]["value"] != sha2($logoData, 256, ["binary" => true]))
-				return ["error" => "Bad ASN.1 ImageData checksum (sha256)"];
+				return ["error" => "Bad ASN.1 ImageData checksum (sha256)", "authentication-results" => "fail"];
 		break;
 		case 64:
 			if ($tokens[12]["value"] != sha2($logoData, 512, ["binary" => true]))
-				return ["error" => "Bad ASN.1 ImageData checksum (sha512)"];
+				return ["error" => "Bad ASN.1 ImageData checksum (sha512)", "authentication-results" => "fail"];
 		break;
 		default:
-			return ["error" => "Bad ASN.1 ImageData checksum type"];
+			return ["error" => "Bad ASN.1 ImageData checksum type", "authentication-results" => "fail"];
 	}
 
-	return ["indicator" => $logoData, "subject" => $pems[0]->subject()];
+	return ["indicator" => $logoData, "subject" => $pems[0]->subject(), "authentication-results" => "pass"];
 }
 
 /* Basic ASN1 parser */

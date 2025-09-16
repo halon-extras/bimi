@@ -57,25 +57,33 @@ if ($bimi["record"]["a"])
 				" policy.authority=pass policy.authority-uri=".$bimi["record"]["a"].
 				" policy.indicator-uri=".$bimi["record"]["l"]." policy.indicator-hash=".sha2($bimi_vmc["indicator"], 256)[:-8].
 				" policy.logo-preference=".($bimi["record"]["avp"] == "personal" ? "personal" : "brand"));
-			/*
-			// required by some email clients
-			$mail->signDKIM($selector, $domain, $key,
-				["additional_headers" => ["Authentication-Results"], "body_length" => 0]);
-			*/
 		}
 		else
 		{
 			echo "BIMI SVG error: $bimi_vmc; $bimi; $bimi_svg";
+			$mail->addHeader("Authentication-Results",
+				gethostname()."; bimi=fail header.d=".$bimi["domain"]." header.selector=".$bimi["selector"]);
 		}
 	}
 	else
+	{
 		echo "BIMI VMC error: $bimi_vmc; $bimi";
+		$mail->addHeader("Authentication-Results",
+			gethostname()."; bimi=".$bimi["authentication-results"]." header.d=".$bimi["domain"]." header.selector=".$bimi["selector"]);
+	}
 }
 else
 {
 	if ($bimi["error"] and $bimi["class"] != "dmarc" and $bimi["class"] != "dns")
 		echo "BIMI error: $bimi";
+	$mail->addHeader("Authentication-Results",
+		gethostname()."; bimi=".$bimi["authentication-results"]);
 }
+/*
+// required by some email clients
+$mail->signDKIM($selector, $domain, $key,
+	["additional_headers" => ["Authentication-Results"], "body_length" => 0]);
+*/
 
 /*
 // Unverified
