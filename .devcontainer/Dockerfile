@@ -23,6 +23,7 @@ RUN apt-get install -y libxml2-dev
 RUN echo -n "UBU2004" > /OSRELEASE.txt
 
 RUN apt-get install -y supervisor
+RUN apt-get install -y halon-extras-dmarc
 COPY ./supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 #COPY ../plugin/SVG_PS-latest.rng /opt/halon/share/plugins/SVG_PS-latest.rng
 CMD ["/usr/bin/supervisord"]

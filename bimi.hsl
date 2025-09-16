@@ -39,17 +39,13 @@ function bimi($mail, $dmarc, $options = [])
 	}
 
 	$x = get_bimi_record($bimiselector = $selector, $bimidomain = $domain);
-	if (!$x or length($x) == 0)
+	if (!is_array($x))
 		$x = get_bimi_record($bimiselector = "default", $bimidomain = $odomain);
-	if (!$x or length($x) != 1)
-	{
-		if (is_array($x))
-			return ["error" => "No valid BIMI record (in response)", "class" => "dns", "authentication-results" => "fail"];
-		if (is_boolean($x))
-			return ["error" => "No valid BIMI record", "class" => "dns", "authentication-results" => "none"];
-		/* catch all others error */
-		return ["error" => "No valid BIMI record", "class" => "dns", "authentication-results" => "tempfail"];
-	}
+	if (!is_array($x))
+		return ["error" => "No valid BIMI record", "class" => "dns", "authentication-results" => $x];
+
+	if (length($x) != 1)
+		return ["error" => "Too many BIMI records", "class" => "dns", "authentication-results" => "fail"];
 
 	if ($x[0]["l"] == "" and $x[0]["a"] == "")
 		return ["error" => "Explicit refusal to participate in BIMI", "class" => "bimi", "authentication-results" => "declined"];
@@ -76,10 +72,14 @@ function get_bimi_selector($header)
 function get_bimi_record($selector, $domain)
 {
 	$result = dns_query("$selector._bimi.$domain", ["type" => "txt"]);
-	if ($result["result"] == "NXDOMAIN" or (isset($result["result"]) and length($result["result"]) == 0))
-		return false;	/* no record */
-	if (!isset($result["result"]))
-		return none;	/* an error */
+	if (isset($result["error"]))
+	{
+		if ($result["error"] == "NXDOMAIN")
+			return "none";
+		if ($result["error"] == "TRY_AGAIN")
+			return "tempfail";
+		return "fail";
+	}
 	$r = [];
 	foreach ($result["result"] as $txt)
 	{
@@ -88,6 +88,8 @@ function get_bimi_record($selector, $domain)
 			continue;
 		$r[] = $x;
 	}
+	if (!$r)
+		return "none";
 	return $r;
 }
 
