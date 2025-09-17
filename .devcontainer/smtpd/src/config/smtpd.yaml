@@ -16,7 +16,3 @@ environment:
   umask: "0027"
   rlimit:
     nofile: 70000
-plugins:
-  - id: bimi
-    config:
-      path: /GeoLite2-Country.mmdb
