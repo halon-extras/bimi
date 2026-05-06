@@ -115,7 +115,7 @@ function check_dmarc_record($policy)
 		return ["error" => "DMARC policy: p=none", "class" => "dmarc", "authentication-results" => "skipped"];
 	if ($policy["sp"] == "none")
 		return ["error" => "DMARC policy: sp=none", "class" => "dmarc", "authentication-results" => "skipped"];
-	if ($policy["p"] == "quarantine" and $policy["pct"] ? number($policy["pct"]) : 100 != 100)
+	if ($policy["p"] == "quarantine" and ($policy["pct"] ? number($policy["pct"]) : 100) != 100)
 		return ["error" => "DMARC policy: p=quarantine and pct<100", "class" => "dmarc", "authentication-results" => "skipped"];
 	return [];
 }
